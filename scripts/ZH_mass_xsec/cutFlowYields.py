@@ -114,30 +114,31 @@ def makePlot():
 	
 if __name__ == "__main__":
 
-    flavor = "ee"
+    flavor = "mumu"
     fIn = ROOT.TFile("tmp/output_mass_xsec_%s.root" % flavor)
-    outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/plots_%s/" % flavor
+    outDir = "/eos/user/l/lia/FCCee/ZH_Converge/ModelIndependent/plots_%s/" % flavor
     
-    cuts = ["cut0", "cut1", "cut2", "cut3", "cut4", "cut5", "cut6"]
+    cuts = ["cut0", "cut1", "cut2", "cut3", "cut4", "cut6", "cut_7"]
     
     
     
     if flavor == "mumu":
     
-        labels = ["All events", "#geq 1 #mu^{#pm} + ISO", "#geq 2 #mu^{#pm} + OS", "86 < m_{#mu^{+}#mu^{#minus}} < 96", "20 < p_{T}^{#mu^{+}#mu^{#minus}} < 70", "|cos#theta_{miss}| < 0.98", "120 < m_{rec} < 140"]
-    
+        labels = ["All events", "#geq 1 #mu^{#pm} + ISO", "#geq 2 #mu^{#pm} + OS", "86 < m_{#mu^{+}#mu^{#minus}} < 96", "20 < p_{T}^{#mu^{+}#mu^{#minus}} < 70", "120 < m_{rec} < 140", "BDT score > 0.2"] 
         sigs = ["wzp6_ee_mumuH_ecm240"]
         sig_scale = 10
         sig_legend = "Z(#mu^{+}#mu^{#minus})H (10#times)"
     
-        bkgs = ["WW", "ZZ", "Zg", "rare"] # this is the order of the plot
+        bkgs = ['rare']
+        #bkgs = ["WW", "ZZ", "Zg", "rare"] # this is the order of the plot
         bkgs_legends = ["W^{+}W^{#minus}", "ZZ", "Z/#gamma^{*} #rightarrow #mu^{+}#mu^{#minus}, #tau^{+}#tau^{#minus}", "Rare (e(e)Z, #gamma#gamma #rightarrow #mu^{+}#mu^{#minus}, #tau^{+}#tau^{#minus})"]
         bkgs_colors = [ROOT.TColor.GetColor(248, 206, 104), ROOT.TColor.GetColor(222, 90, 106), ROOT.TColor.GetColor(100, 192, 232), ROOT.TColor.GetColor(155, 152, 204)] # from
         bgks_cfg = { 
             "WW"	    : ["p8_ee_WW_ecm240"],
             "ZZ"	    : ["p8_ee_ZZ_ecm240"],
             "Zg"        : ["wzp6_ee_mumu_ecm240", "wzp6_ee_tautau_ecm240"],
-            "rare"      : ["wzp6_egamma_eZ_Zmumu_ecm240", "wzp6_gammae_eZ_Zmumu_ecm240", "wzp6_gaga_mumu_60_ecm240", "wzp6_gaga_tautau_60_ecm240", "wzp6_ee_nuenueZ_ecm240"]
+            "rare"      : ["wzp6_egamma_eZ_Zmumu_ecm240"]
+            #"rare"      : ["wzp6_egamma_eZ_Zmumu_ecm240", "wzp6_gammae_eZ_Zmumu_ecm240", "wzp6_gaga_mumu_60_ecm240", "wzp6_gaga_tautau_60_ecm240", "wzp6_ee_nuenueZ_ecm240"]
         }
         
     if flavor == "ee":

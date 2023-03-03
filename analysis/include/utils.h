@@ -32,36 +32,36 @@ float deltaR(Vec_rp in) {
     return std::sqrt(std::pow(tlv1.Eta()-tlv2.Eta(), 2) + std::pow(tlv1.Phi()-tlv2.Phi(), 2));
 }
 
-// acolinearity between two reco particles
-float acolinearity(Vec_rp in) {
-    if(in.size() != 2) return -1;
-
-    TLorentzVector p1;
-    p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
-
-    TLorentzVector p2;
-    p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
-
-    float acol = abs(p1.Theta() - p2.Theta());
-    return acol;
-}
-
-// acoplanarity between two reco particles
-float acoplanarity(Vec_rp in) {
-    if(in.size() != 2) return -1;
-
-    TLorentzVector p1;
-    p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
-
-    TLorentzVector p2;
-    p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
-
-    float acop = abs(p1.Phi() - p2.Phi());
-    if(acop > M_PI) acop = 2 * M_PI - acop;
-    acop = M_PI - acop;
-
-    return acop;
-}
+//// acolinearity between two reco particles
+//float acolinearity(Vec_rp in) {
+//    if(in.size() != 2) return -1;
+//
+//    TLorentzVector p1;
+//    p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
+//
+//    TLorentzVector p2;
+//    p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
+//
+//    float acol = abs(p1.Theta() - p2.Theta());
+//    return acol;
+//}
+//
+//// acoplanarity between two reco particles
+//float acoplanarity(Vec_rp in) {
+//    if(in.size() != 2) return -1;
+//
+//    TLorentzVector p1;
+//    p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
+//
+//    TLorentzVector p2;
+//    p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
+//
+//    float acop = abs(p1.Phi() - p2.Phi());
+//    if(acop > M_PI) acop = 2 * M_PI - acop;
+//    acop = M_PI - acop;
+//
+//    return acop;
+//}
 
 // visible energy
 float visibleEnergy(Vec_rp in, float p_cutoff = 0.0) {

@@ -106,8 +106,8 @@ def doSignal():
         canvas.Modify()
         canvas.Update()
         canvas.Draw()
-        canvas.SaveAs("%s/hist_mH%s.png" % (outDir, mH_))
-        canvas.SaveAs("%s/hist_mH%s.pdf" % (outDir, mH_))
+        canvas.SaveAs("%s/hist_mH%s_%s.png" % (outDir, mH_, selection))
+        canvas.SaveAs("%s/hist_mH%s_%s.pdf" % (outDir, mH_, selection))
         
     
         del dummyB
@@ -127,9 +127,31 @@ def doBackgrounds():
     global h_obs
 
     if flavor == "mumu":
-        procs = ["p8_ee_WW_mumu_ecm240", "p8_ee_ZZ_ecm240", "wzp6_ee_mumu_ecm240", "wzp6_egamma_eZ_Zmumu_ecm240", "wzp6_gammae_eZ_Zmumu_ecm240"]
-        
-
+        procs = [ 'p8_ee_WW_ecm240',
+                  'wzp6_egamma_eZ_Zmumu_ecm240',
+                  'wzp6_gammae_eZ_Zmumu_ecm240',
+                  'wzp6_ee_mumu_ecm240',
+                  'p8_ee_ZZ_ecm240',
+                  ##rare  
+                  "wzp6_ee_tautau_ecm240",
+                  "wzp6_gaga_mumu_60_ecm240",
+                  "wzp6_gaga_tautau_60_ecm240",
+                  "wzp6_ee_nuenueZ_ecm240"
+                ]
+    
+    elif flavor == "ee":
+        procs = [ 'p8_ee_WW_ecm240',
+                  'wzp6_egamma_eZ_Zee_ecm240',
+                  'wzp6_gammae_eZ_Zee_ecm240',
+                  'wzp6_ee_ee_Mee_30_150_ecm240',
+                  'p8_ee_ZZ_ecm240',
+                  ##rare  
+                  "wzp6_ee_tautau_ecm240",
+                  "wzp6_gaga_ee_60_ecm240",
+                  "wzp6_gaga_tautau_60_ecm240",
+                  "wzp6_ee_nuenueZ_ecm240"
+                ]
+    
 
     hist_bkg = None
     for proc in procs:
@@ -218,25 +240,32 @@ def doBackgrounds():
     canvas.Modify()
     canvas.Update()
     canvas.Draw()
-    canvas.SaveAs("%s/binned_bkg.png" % (outDir))  
-    canvas.SaveAs("%s/binned_bkg.pdf" % (outDir))  
+    canvas.SaveAs("%s/binned_bkg_%s.png" % (outDir, selection))  
+    canvas.SaveAs("%s/binned_bkg_%s.pdf" % (outDir, selection))  
     
   
 
  
 if __name__ == "__main__":
 
-    flavor = "mumu"
-    label = "#mu^{#plus}#mu^{#minus}"
-    baseFileName = "/eos/user/l/lia/FCCee/NewWorkFlow/BDT_analysis_samples/final/{sampleName}_sel0_MRecoil_Mll_73_120_pll_05_histo.root"
+    flavor = "ee"
+    if flavor == "mumu":
+        label = "#mu^{#plus}#mu^{#minus}"
+    elif flavor == "ee":
+        label = "#e^{#plus}#e^{#minus}"
+    #selection = "sel_Baseline_no_costhetamiss"
+    #selection = "sel_Baseline"
+    selection = "sel_Baseline_no_costhetamiss_MVA09"
+    baseFileName = "/eos/user/l/lia/FCCee/Winter2023/%s/BDT_analysis_samples/final/{sampleName}_%s_histo.root" % (flavor, selection)
+    #baseFileName = "/eos/user/l/lia/FCCee/NewWorkFlow/BDT_analysis_samples/final/{sampleName}_sel0_MRecoil_Mll_73_120_pll_05_histo.root"
     hName = "leptonic_recoil_m_zoom2"
-    outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_binned_BDT/init/"
+    outDir = "/eos/user/l/lia/FCCee/Winter2023/%s/ZH_mass_xsec/combine_binned_BDT/init/%s" % (flavor, selection)
     lumi = 5000000
     
 
-    runDir = "combine/run_binned_BDT/"
+    runDir = "combine/run_binned_BDT_%s_%s" % (flavor, selection)
     if not os.path.exists(runDir): os.makedirs(runDir)
-
+    if not os.path.exists(outDir): os.makedirs(outDir)
     rebin = 1 # the recoil histograms are binned at 1 MeV
     recoilMin = 120
     recoilMax = 140
@@ -259,3 +288,6 @@ if __name__ == "__main__":
     subprocess.call(cmd, shell=True)
     cmd = "text2workspace.py datacard_binned.txt -o ws.root -v 10"
     subprocess.call(cmd, shell=True, cwd=runDir)
+    cmd = "combine -M FitDiagnostics -t -1 ws.root --expectSignal=1 -m 125  -v 10 --rMin -2 --rMax 2"
+    subprocess.call(cmd, shell=True, cwd=runDir)
+

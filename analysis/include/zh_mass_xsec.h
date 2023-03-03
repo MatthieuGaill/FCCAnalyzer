@@ -233,8 +233,88 @@ Vec_rp muon_quality_check(Vec_rp in){
     }
     return result;
 }
-   
-    
+
+ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData>  sort_greater(ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData> in    ){
+  ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData> result;
+  //at least one muon + and one muon - in each event
+  
+  int n = in.size();
+  if (n == 0 ){
+    return result;
+  }
+  ROOT::VecOps::RVec<float> pT = FCCAnalyses::ReconstructedParticle::get_pt(in);
+  std::vector< std::pair <float, edm4hep::ReconstructedParticleData> > vect;
+  for (int i = 0; i<n ; ++i){
+    vect.push_back(std::make_pair(pT.at(i),in.at(i)));
+  }
+  std::stable_sort(vect.begin(), vect.end(),
+                  [](const auto& a, const auto& b){return a.first > b.first;});
+  //std::sort(vect.begin(), vect.end());
+  for (int i = 0; i<n ; ++i){
+    result.push_back(vect.at(i).second);
+  }
+  return result;
+}
+ 
+
+ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData>  sort_greater_p(ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData>     in){
+ ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData> result;
+ //at least one muon + and one muon - in each event
+ 
+   int n = in.size();
+ if (n == 0 ){
+     return result;
+   }
+
+   ROOT::VecOps::RVec<float> p = FCCAnalyses::ReconstructedParticle::get_p(in);
+ std::vector< std::pair <float, edm4hep::ReconstructedParticleData> > vect;
+ for (int i = 0; i<n ; ++i){
+     vect.push_back(std::make_pair(p.at(i),in.at(i)));
+   }
+ std::stable_sort(vect.begin(), vect.end(),
+                  [](const auto& a, const auto& b){return a.first > b.first;});
+ //std::sort(vect.begin(), vect.end());
+ for (int i = 0; i<n ; ++i){
+     result.push_back(vect.at(i).second);
+   }
+  return result;
+}
+
+ROOT::VecOps::RVec<float> acolinearity(ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData> in){
+ ROOT::VecOps::RVec<float> result;
+ if(in.size() < 2) return result;
+
+   TLorentzVector p1;
+ p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
+
+   TLorentzVector p2;
+ p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
+
+   float acol = abs(p1.Theta() - p2.Theta());
+
+   result.push_back(acol);
+ return result;
+}
+
+ROOT::VecOps::RVec<float> acoplanarity(ROOT::VecOps::RVec<edm4hep::ReconstructedParticleData> in){
+ ROOT::VecOps::RVec<float> result;
+ if(in.size() < 2) return result;
+
+   TLorentzVector p1;
+ p1.SetXYZM(in[0].momentum.x, in[0].momentum.y, in[0].momentum.z, in[0].mass);
+
+   TLorentzVector p2;
+ p2.SetXYZM(in[1].momentum.x, in[1].momentum.y, in[1].momentum.z, in[1].mass);
+
+   float acop = abs(p1.Phi() - p2.Phi());
+ if(acop > M_PI) acop = 2 * M_PI - acop;
+ acop = M_PI - acop;
+
+   result.push_back(acop);
+ return result;
+}
+
+
 }
 
 

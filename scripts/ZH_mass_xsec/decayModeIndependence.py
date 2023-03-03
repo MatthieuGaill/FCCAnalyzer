@@ -78,28 +78,35 @@ def makePlot(g_pulls, h_pulls, avg=0):
     latex.SetTextColor(ROOT.kGray+1)
     latex.DrawLatex(0.2, 0.17, "avg. #pm 0.1 %")
     
-    canvas.SaveAs("/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/plots_%s/decay_mode_independence.png" % flavor)
-    canvas.SaveAs("/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/plots_%s/decay_mode_independence.pdf" % flavor)    
+    canvas.SaveAs("%s/decay_mode_independence_costhetamiss.png" % outDir)
+    canvas.SaveAs("%s/decay_mode_independence_costhetamiss.pdf" % outDir)    
     
 
 
 if __name__ == "__main__":
 
+    #flavor = "mumu"
     flavor = "ee"
     proc = "wzp6_ee_%sH_ecm240" % flavor
-    
-
+    outDir = "/eos/user/l/lia/FCCee/Winter2023/%s/plots_checks/" % flavor  
+    if not os.path.exists(outDir): os.makedirs(outDir)
     # cuts with cos(theta)
-    cuts = ["_cut0", "_cut1", "_cut2", "_cut3", "_cut4", "_cut5", "_cut6"]
-    cut_labels = [r"No selection", r"$\geq 1 \mu$ + ISO", r"$\geq 2 \mu$ + OS", r"$86 < m_{\mu^{+}\mu^{-}} < 96$", r"$20 < p_{\mu^{+}\mu^{-}} < 70$", r"$\cos(\theta_{miss}) < 0.98$", r"$120 < m_{rec} < 140$"]
+    #cuts = ["_cut0", "_cut1", "_cut2", "_cut3", "_cut4", "_cut5", "_cut6"]
+    #cut_labels = [r"No selection", r"$\geq 1 \mu$ + ISO", r"$\geq 2 \mu$ + OS", r"$86 < m_{\mu^{+}\mu^{-}} < 96$", r"$20 < p_{\mu^{+}\mu^{-}} < 70$", r"$\cos(\theta_{miss}) < 0.98$", r"$120 < m_{rec} < 140$"]
     
     # cuts without cos(theta)
-    cuts = ["_cut0", "_cut1", "_cut2", "_cut3", "_cut4", "_cut6"]
-    cut_labels = [r"No selection", r"$\geq 1 \mu$ + ISO", r"$\geq 2 \mu$ + OS", r"$86 < m_{\mu^{+}\mu^{-}} < 96$", r"$20 < p_{\mu^{+}\mu^{-}} < 70$", r"$120 < m_{rec} < 140$"]
+    cuts = ["_cut0", "_cut1", "_cut2", "_cut3", "_cut4", "_cut6", "_cut7"]
+    #cuts = ["_cut0", "_cut1", "_cut2", "_cut3", "_cut4", "_cut6"]
+    if flavor == "mumu":
+      cut_labels = [r"No selection", r"$\geq 1 \mu$ + ISO", r"$\geq 2 \mu$ + OS", r"$86 < m_{\mu^{+}\mu^{-}} < 96$", r"$20 < p_{\mu^{+}\mu^{-}} < 70$", r"$120 < m_{rec} < 140$", r"BDT score > 0.2"]
+    elif flavor == "ee":
+      cut_labels = [r"No selection", r"$\geq 1 e$ + ISO", r"$\geq 2 e$ + OS", r"$86 < m_{e^{+}e^{-}} < 96$", r"$20 < p_{e^{+}e^{-}} < 70$", r"$120 < m_{rec} < 140$", r"BDT score > 0.3"]
     
-    xMin, xMax = 65, 75#55, 75
+    xMin, xMax = 63, 76#55, 75
+    #xMin, xMax = 66, 82
+    #xMin, xMax = 49, 70
     if flavor == "ee":
-        xMin, xMax = 60, 70 #50, 65
+        xMin, xMax = 50, 66 #50, 65
         cut_labels = [x.replace("\mu", "e") for x in cut_labels]
     
     
