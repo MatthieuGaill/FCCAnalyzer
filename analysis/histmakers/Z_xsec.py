@@ -20,12 +20,13 @@ bins_p_ll = (20000, 0, 200) # 10 MeV bins
 bins_theta = (500, -5, 5)
 bins_phi = (500, -5, 5)
 
-bins_count = (50, 0, 50)
+bins_count = (100, 0, 100)
 bins_pdgid = (60, -30, 30)
 bins_charge = (10, -5, 5)
 
 bins_resolution = (10000, 0.95, 1.05)
 
+bins_resolution_1 = (20000, 0, 2)
 
 jet_energy = (1000, 0, 100) # 100 MeV bins
 dijet_m = (2000, 0, 200) # 100 MeV bins
@@ -64,7 +65,7 @@ def build_graph_ll(df, dataset):
     
     # cuts on leptons
     #df = df.Define("selected_muons", "FCCAnalyses::excluded_Higgs_decays(muons, MCRecoAssociations0, MCRecoAssociations1, ReconstructedParticles, Particle, Particle0, Particle1)") # was 10
-    df = df.Define("leps_sel_p", "FCCAnalyses::ReconstructedParticle::sel_p(20)(leps_all)")
+    df = df.Define("leps_sel_p", "FCCAnalyses::ReconstructedParticle::sel_p(1)(leps_all)")
     df = df.Alias("leps", "leps_sel_p") 
     
     df = df.Define("leps_p", "FCCAnalyses::ReconstructedParticle::get_p(leps)")
@@ -134,7 +135,7 @@ def build_graph_ll(df, dataset):
     #########
     ### CUT 4 :cut on Z mass
     #########
-    df = df.Filter("zll_m[0] > 73 && zll_m[0] < 109").Define("cut4", "4")
+    df = df.Filter("(zll_m[0] > 73 && zll_m[0] < 109) || true").Define("cut4", "4")
     results.append(df.Histo1D(("cutFlow_cut4", "", *bins_count), "cut4"))
     
     
@@ -163,10 +164,20 @@ def build_graph_qq(df, dataset):
     df = df.Define("RP_e",  "FCCAnalyses::ReconstructedParticle::get_e(ReconstructedParticles)")
     df = df.Define("RP_m",  "FCCAnalyses::ReconstructedParticle::get_mass(ReconstructedParticles)")
     df = df.Define("RP_q",  "FCCAnalyses::ReconstructedParticle::get_charge(ReconstructedParticles)")
-
+    df = df.Define("RP_no",  "FCCAnalyses::ReconstructedParticle::get_n(ReconstructedParticles)")
+    
     df = df.Define("pseudo_jets", "FCCAnalyses::JetClusteringUtils::set_pseudoJets(RP_px, RP_py, RP_pz, RP_e)")
     
     
+    # sum of reco particles energy
+    df = df.Define("Evis",  "FCCAnalyses::visibleEnergy(ReconstructedParticles)")
+    df = df.Define("Evis_norm", "Evis/91.188")
+    
+    results.append(df.Histo1D(("Evis", "", *bins_m_ll), "Evis"))
+    results.append(df.Histo1D(("Evis_norm", "", *bins_resolution_1), "Evis_norm"))
+    
+    results.append(df.Histo1D(("RP_no", "", *bins_count), "RP_no"))
+ 
     
     # more info: https://indico.cern.ch/event/1173562/contributions/4929025/attachments/2470068/4237859/2022-06-FCC-jets.pdf
     # https://github.com/HEP-FCC/FCCAnalyses/blob/master/addons/FastJet/src/JetClustering.cc
@@ -185,6 +196,7 @@ def build_graph_qq(df, dataset):
     df = df.Define("jets_px", "FCCAnalyses::JetClusteringUtils::get_px(jets)")
     df = df.Define("jets_py", "FCCAnalyses::JetClusteringUtils::get_py(jets)")
     df = df.Define("jets_pz", "FCCAnalyses::JetClusteringUtils::get_pz(jets)")
+    df = df.Define("jets_phi", "FCCAnalyses::JetClusteringUtils::get_phi(jets)")
     df = df.Define("jets_m", "FCCAnalyses::JetClusteringUtils::get_m(jets)")
         
     df = df.Define("njets", "jets_e.size()")
@@ -201,7 +213,8 @@ def build_graph_qq(df, dataset):
     results.append(df.Histo1D(("dijet_m", "", *dijet_m), "dijet_m"))
     results.append(df.Histo1D(("dijet_m_final", "", *dijet_m_final), "dijet_m"))
    
-        
+    results.append(df.Histo1D(("jets_phi", "", *bins_phi), "jets_phi"))    
+
     
     df = df.Define("visibleMass", "FCCAnalyses::visibleMass(ReconstructedParticles)") # scalar
     df = df.Define("missingEnergy_vec", "FCCAnalyses::missingEnergy(91.1, ReconstructedParticles)") # returns a vector
@@ -227,7 +240,8 @@ if __name__ == "__main__":
     datasets = [] # list of datasets to be run over
 
     if args.flavor == "mumu": 
-        datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zmumu_ecm91", "p8_ee_Ztautau_ecm91"])
+        datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zmumu_ecm91", "wzp6_ee_mumu_ecm91p2"])
+        #datasets = functions.filter_datasets(datasets_spring2021_ecm91, ["wzp6_gaga_mumu_5_ecm91p2"])
         result = functions.build_and_run(datasets, build_graph_ll, "tmp/output_z_xsec_mumu.root", maxFiles=args.maxFiles) # , norm=True, lumi=150000000
 
     if args.flavor == "ee":
@@ -235,7 +249,8 @@ if __name__ == "__main__":
         result = functions.build_and_run(datasets, build_graph_ll, "tmp/output_z_xsec_ee.root", maxFiles=args.maxFiles, norm=True, lumi=150000000)
  
     if args.flavor == "qq":
-        datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zuds_ecm91", "p8_ee_Zcc_ecm91", "p8_ee_Zbb_ecm91"])
+        #datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zuds_ecm91", "p8_ee_Zcc_ecm91", "p8_ee_Zbb_ecm91"])
+        datasets += functions.filter_datasets(datasets_spring2021_ecm91, ["p8_ee_Zuds_ecm91", "wzp6_ee_qq_ecm91p2"])
         result = functions.build_and_run(datasets, build_graph_qq, "tmp/output_z_xsec_qq.root", maxFiles=args.maxFiles, norm=True, lumi=150000000)
 
     
