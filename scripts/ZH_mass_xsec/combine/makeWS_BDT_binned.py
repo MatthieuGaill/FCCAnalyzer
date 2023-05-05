@@ -248,18 +248,20 @@ def doBackgrounds():
  
 if __name__ == "__main__":
 
-    flavor = "ee"
+    #flavor = "ee"
+    flavor = "mumu"
     if flavor == "mumu":
         label = "#mu^{#plus}#mu^{#minus}"
     elif flavor == "ee":
         label = "#e^{#plus}#e^{#minus}"
-    #selection = "sel_Baseline_no_costhetamiss"
+    selection = "sel_Baseline_no_costhetamiss"
     #selection = "sel_Baseline"
-    selection = "sel_Baseline_no_costhetamiss_MVA09"
-    baseFileName = "/eos/user/l/lia/FCCee/Winter2023/%s/BDT_analysis_samples/final/{sampleName}_%s_histo.root" % (flavor, selection)
+    #selection = "sel_Baseline_no_costhetamiss_MVA09"
+    baseFileName = "/eos/user/l/lia/FCCee/MidTerm/%s/BDT_analysis_samples/final/{sampleName}_%s_histo.root" % (flavor, selection)
     #baseFileName = "/eos/user/l/lia/FCCee/NewWorkFlow/BDT_analysis_samples/final/{sampleName}_sel0_MRecoil_Mll_73_120_pll_05_histo.root"
     hName = "leptonic_recoil_m_zoom2"
-    outDir = "/eos/user/l/lia/FCCee/Winter2023/%s/ZH_mass_xsec/combine_binned_BDT/init/%s" % (flavor, selection)
+    hName = "BDT_Score"
+    outDir = "/eos/user/l/lia/FCCee/MidTerm/%s/ZH_mass_xsec/combine_binned_BDT/init/%s" % (flavor, selection)
     lumi = 5000000
     
 
@@ -288,6 +290,7 @@ if __name__ == "__main__":
     subprocess.call(cmd, shell=True)
     cmd = "text2workspace.py datacard_binned.txt -o ws.root -v 10"
     subprocess.call(cmd, shell=True, cwd=runDir)
-    cmd = "combine -M FitDiagnostics -t -1 ws.root --expectSignal=1 -m 125  -v 10 --rMin -2 --rMax 2"
+    #cmd = "combine -M FitDiagnostics -t -1 ws.root --expectSignal=1 -m 125  -v 10 --rMin -2 --rMax 2"
+    cmd = "combine -M MultiDimFit -t -1 --setParameterRanges r=%f,%f --points=%d --algo=grid ws.root --expectSignal=1 -m 125 --X-rtd TMCSO_AdaptivePseudoAsimov -v 10 --X-rtd ADDNLL_CBNLL=0 -n xsec %s" % (0.98, 1.00, 50, "")
     subprocess.call(cmd, shell=True, cwd=runDir)
 

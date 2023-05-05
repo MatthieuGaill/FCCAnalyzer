@@ -610,7 +610,7 @@ if __name__ == "__main__":
         
     
     ############### MUON+ELECTRON
-    if True:
+    if False:
         combineOptions = ""
         if not doSyst:
             combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_MU,LEPSCALE_EL,bkg_norm --setParameters bkg_norm=0"
@@ -659,3 +659,22 @@ if __name__ == "__main__":
         doFitDiagnostics_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, combineOptions=combineOptions)
         #doFit_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, npoints=50, combineOptions=combineOptions)
         #analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=xMin, xMax=xMax)
+
+
+    ############### MUON
+    #combineDir = "combine/run_xsec_bdt"
+    #outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine/xsec_bdt/"
+    selection = "sel_Baseline_no_costhetamiss"
+    flavor = "mumu"
+    outDir = "/eos/user/l/lia/FCCee/MidTerm/%s/ZH_mass_xsec/combine_binned_BDT/init/%s" % (flavor, selection)
+    combineDir = "combine/run_binned_BDT_%s_%s" % (flavor, selection)
+    tag = ''
+    if True:
+    
+        combineOptions = ""
+
+        tag, label = "", "#mu^{#plus}#mu^{#minus}"
+        rMin, rMax = 0.98, 1.02
+        doFit_xsec("%s/%s" % (combineDir, tag), rMin=rMin, rMax=rMax, npoints=50, combineOptions=combineOptions)
+        analyzeXsec("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=rMin, xMax=rMax)
+        
