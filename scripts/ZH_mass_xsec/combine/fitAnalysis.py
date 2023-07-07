@@ -65,9 +65,12 @@ def analyzeMass(runDir, outDir, xMin=-1, xMax=-1, yMin=0, yMax=2, label="label")
         if g.GetY()[i] == 0.: mass = g.GetX()[i]
 
     # extract uncertainties at crossing = 1
-    unc_m = findCrossing(xv, yv, left=True, flip=mass)
-    unc_p = findCrossing(xv, yv, left=False, flip=mass)
-    unc = 0.5*(abs(mass-unc_m) + abs(unc_p-mass))
+    try : # just to debug if likelihood hasn't any value >= 1
+        unc_m = findCrossing(xv, yv, left=True, flip=mass)
+        unc_p = findCrossing(xv, yv, left=False, flip=mass)
+        unc = 0.5*(abs(mass-unc_m) + abs(unc_p-mass))
+    except :
+        unc_m, unc_p, unc = 0,0,0
        
     ########### PLOTTING ###########
     cfg = {
@@ -126,8 +129,8 @@ def analyzeMass(runDir, outDir, xMin=-1, xMax=-1, yMin=0, yMax=2, label="label")
     
     
     # write values to text file
-    str_out = "%f %f %f %f\n" % (unc_m, unc_p, unc, mass)
-    for i in range(0, len(xv)): str_out += "%f %f\n" % (xv[i], yv[i])
+    str_out = "%.16f %.16f %.16f %.16f\n" % (unc_m, unc_p, unc, mass)
+    for i in range(0, len(xv)): str_out += "%.16f %.16f\n" % (xv[i], yv[i])
     tFile = open("%s/mass%s.txt" % (outDir, suffix), "w")
     tFile.write(str_out)
     tFile.close()
@@ -255,17 +258,17 @@ def doFitDiagnostics_mass(runDir, mhMin=124.99, mhMax=125.01, combineOptions = "
     # ,shapeBkg_bkg_bin1__norm
     subprocess.call(cmd, shell=True, cwd=runDir)
     
-def plotMultiple(tags, labels, fOut, xMin=-1, xMax=-1, yMin=0, yMax=2):
+def plotMultiple(tags, labels, dirIn, fOut, xMin=-1, xMax=-1, yMin=0, yMax=2, name=""):
 
     best_mass, best_xsec = [], []
     unc_mass, unc_xsec = [], []
     g_mass, g_xsec = [], []
 
     
-    for tag in tags:
+    for n,tag in enumerate(tags):
     
         xv, yv = [], []
-        fIn = open("%s/mass%s.txt" % (tag, suffix), "r")
+        fIn = open("%s/mass%s.txt" % (dirIn[n], tag), "r")
         for i,line in enumerate(fIn.readlines()):
 
             line = line.rstrip()
@@ -275,6 +278,7 @@ def plotMultiple(tags, labels, fOut, xMin=-1, xMax=-1, yMin=0, yMax=2):
             else:
                 xv.append(float(line.split(" ")[0]))
                 yv.append(float(line.split(" ")[1]))
+        fIn.close()
     
         g = ROOT.TGraph(len(xv), array.array('d', xv), array.array('d', yv))    
         g_mass.append(g)
@@ -338,7 +342,7 @@ def plotMultiple(tags, labels, fOut, xMin=-1, xMax=-1, yMin=0, yMax=2):
     canvas.Update()
     canvas.Draw()
     canvas.SaveAs("%s%s.png" % (fOut, suffix))
-    canvas.SaveAs("%s%s.pdf" % (fOut, suffix))
+    #canvas.SaveAs("%s%s.pdf" % (fOut, suffix))
  
 
 def plotMultiple_xsec(tags, labels, fOut, xMin=-1, xMax=-1, yMin=0, yMax=2):
@@ -438,76 +442,7 @@ def breakDown():
         if type_ == "xsec": unc*= 100. # convert to %
         return best, unc
 
-
-    ############# xsec
-    canvas = ROOT.TCanvas("c", "c", 800, 800)
-    canvas.SetTopMargin(0.08)
-    canvas.SetBottomMargin(0.1)
-    canvas.SetLeftMargin(0.25)
-    canvas.SetRightMargin(0.05)
-    canvas.SetFillStyle(4000) # transparency?
-    canvas.SetGrid(1, 0)
-    canvas.SetTickx(1)
-
-    xMin, xMax = -2, 2
-    xTitle = "#sigma_{syst.}(#sigma(ZH, Z#rightarrow#mu#mu)/#sigma_{ref}) (%)"
-
-    ref = "IDEA_STAT"
-    best_ref, unc_ref = getUnc(ref, "xsec")
-    params = ["IDEA_ISR", "IDEA_BES", "IDEA_SQRTS", "IDEA_MUSCALE", "IDEA_ISR_BES_SQRTS_MUSCALE"]
-    labels = ["ISR (conservative)", "BES 1%", "#sqrt{s} #pm 2 MeV", "Muon scale (~10^{-5})", "#splitline{Syst. combined}{(BES 1%)}"]
-    
-    
-    n_params = len(params)
-    h_pulls = ROOT.TH2F("pulls", "pulls", 6, xMin, xMax, n_params, 0, n_params)
-    g_pulls = ROOT.TGraphAsymmErrors(n_params)
-
-    i = n_params
-    for p in xrange(n_params):
-
-        i -= 1
-        best, unc = getUnc(params[p], "xsec")
-        unc = math.sqrt(unc**2 - unc_ref**2)
-        g_pulls.SetPoint(i, 0, float(i) + 0.5)
-        g_pulls.SetPointError(i, unc, unc, 0., 0.)
-        h_pulls.GetYaxis().SetBinLabel(i + 1, labels[p])
-       
-
-
-    h_pulls.GetXaxis().SetTitleSize(0.04)
-    h_pulls.GetXaxis().SetLabelSize(0.03)
-    h_pulls.GetXaxis().SetTitle(xTitle)
-    h_pulls.GetXaxis().SetTitleOffset(1)
-    h_pulls.GetYaxis().SetLabelSize(0.045)
-    h_pulls.GetYaxis().SetTickLength(0)
-    h_pulls.GetYaxis().LabelsOption('v')
-    h_pulls.SetNdivisions(506, 'XYZ')
-    h_pulls.Draw("HIST")
-    
-
-    g_pulls.SetMarkerSize(0.8)
-    g_pulls.SetMarkerStyle(20)
-    g_pulls.SetLineWidth(2)
-    g_pulls.Draw('P SAME')
-    
-    
-    latex = ROOT.TLatex()
-    latex.SetNDC()
-    latex.SetTextSize(0.045)
-    latex.SetTextColor(1)
-    latex.SetTextFont(42)
-    latex.SetTextAlign(30) # 0 special vertical aligment with subscripts
-    latex.DrawLatex(0.95, 0.925, "#sqrt{s} = 240 GeV, 5 ab^{#minus1}")
-
-    latex.SetTextAlign(13)
-    latex.SetTextFont(42)
-    latex.SetTextSize(0.045)
-    latex.DrawLatex(0.25, 0.96, "#bf{FCCee} #scale[0.7]{#it{Simulation}}")
-
-        
-    canvas.SaveAs("%s/xsec_breakDown.png" % outDir)
-    canvas.SaveAs("%s/xsec_breakDown.pdf" % outDir)    
-    del canvas, g_pulls, h_pulls
+    # deleted x-sec part
 
   
     ############# mass
@@ -521,12 +456,15 @@ def breakDown():
     canvas.SetTickx(1)
 
 
-    xMin, xMax = -5, 5
+    xMin, xMax = -3.0, 3.0
     xTitle = "#sigma_{syst.}(m_{h}) (MeV)"
 
-    ref = "IDEA_STAT"
+    ref = "STAT"
     best_ref, unc_ref = getUnc(ref, "mass")
-    params = ["IDEA_ISR", "IDEA_BES", "IDEA_SQRTS", "IDEA_MUSCALE", "IDEA_ISR_BES_SQRTS_MUSCALE"]
+    if flavor == "ee":
+        params = ["BES", "SQRTS", "LEPSCALE_EL", "BES_SQRTS_LEPSCALE_EL"]
+    elif flavor == "mumu":
+        params = ["BES", "SQRTS", "LEPSCALE_MU", "BES_SQRTS_LEPSCALE_MU"]
     labels = ["ISR (conservative)", "BES 1%", "#sqrt{s} #pm 2 MeV", "Muon scale (~10^{-5})", "#splitline{Syst. combined}{(BES 1%)}"]
     
     n_params = len(params)
@@ -534,11 +472,14 @@ def breakDown():
     g_pulls = ROOT.TGraphAsymmErrors(n_params)
 
     i = n_params
+    fOut_txt.write("Params           unc         diff**2 \n")
     for p in xrange(n_params):
 
         i -= 1
         best, unc = getUnc(params[p], "mass")
-        unc = math.sqrt(unc**2 - unc_ref**2)
+        fOut_txt.write(params[p]+"       "+str(unc))
+        unc = math.sqrt(abs(unc**2 - unc_ref**2))
+        fOut_txt.write("     "+str(unc)+"\n")
         g_pulls.SetPoint(i, 0, float(i) + 0.5)
         g_pulls.SetPointError(i, unc, unc, 0., 0.)
         h_pulls.GetYaxis().SetBinLabel(i + 1, labels[p])
@@ -576,8 +517,8 @@ def breakDown():
     latex.DrawLatex(0.25, 0.96, "#bf{FCCee} #scale[0.7]{#it{Simulation}}")
 
         
-    canvas.SaveAs("%s/mass_breakDown.png" % outDir)
-    canvas.SaveAs("%s/mass_breakDown.pdf" % outDir)   
+    canvas.SaveAs("%s/mass_breakDown.png" % runDir)
+    canvas.SaveAs("%s/mass_breakDown.pdf" % runDir)    
     del canvas, g_pulls, h_pulls
     
 
@@ -600,185 +541,111 @@ def combineCards(runDir, input_=[]):
   
 if __name__ == "__main__":
 
+    flavor = "mumu"  # ee, mumu or combine
     combineDir = "combine/run"
-    outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine/"
+    outDir = "/eos/user/m/mgaillia/FCCee/MidTerm/"+flavor+"/BDT_analysis_samples1/ZH_mass_xsec/cat0"
     doSyst=True
     
-    suffix=""
-    if not doSyst:
-        suffix = "_stat"
-    
-    ############### MUON
-    if False:
-        combineOptions = "--setParameters shapeBkg_bkg_bin1__norm=0,r=1.0"
-        #combineOptions = "--freezeParameters r,shapeBkg_bkg_bin1__norm --setParameters MH=125.00,shapeBkg_bkg_bin1__norm=0"
-        combineOptions = "--freezeParameters bkg_norm --setParameters bkg_norm=0"
-        #combineOptions = "--freezeParameters r,shapeBkg_bkg_bin1__norm --setParameters MH=125.00,shapeBkg_bkg_bin1__norm=0"
-        combineOptions = ""
-        if not doSyst:
-            combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_MU"
-        
+    if flavor =="mumu":
         tag, label = "mumu_cat0", "#mu^{#plus}#mu^{#minus}, inclusive"
-        mhMin, mhMax = 124.99, 125.01
-        rMin, rMax = 0.98, 1.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        #doFit_xsec("%s/%s" % (combineDir, tag), rMin=rMin, rMax=rMax, npoints=50, combineOptions=combineOptions)
-        #analyzeXsec("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=rMin, xMax=rMax)
-        #doFitDiagnostics_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, combineOptions=combineOptions)
-        
-     
-        tag, label = "mumu_cat1", "#mu^{#plus}#mu^{#minus}, central-central"
-        mhMin, mhMax = 124.99, 125.01
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        tag, label = "mumu_cat2", "#mu^{#plus}#mu^{#minus}, central-forward"
         mhMin, mhMax = 124.98, 125.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        tag, label = "mumu_cat3", "#mu^{#plus}#mu^{#minus}, forward-forward"
-        mhMin, mhMax = 124.98, 125.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        tag, label = "mumu_combined", "#mu^{#plus}#mu^{#minus}, combined"
-        mhMin, mhMax = 124.99, 125.01
-        combineCards("%s/%s" % (combineDir, tag), [combineDir+"/mumu_cat1/datacard_parametric.txt", combineDir+"/mumu_cat2/datacard_parametric.txt", combineDir+"/mumu_cat3/datacard_parametric.txt"])
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-
-    
-    ############### ELECTRON
-    if False:
-    
-        combineOptions = "--freezeParameters r --setParameters ,r=1.067"
-        combineOptions = ""
-        if not doSyst:
-            combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_EL"
-    
+    elif flavor =="ee":
         tag, label = "ee_cat0", "e^{#plus}e^{#minus}, inclusive"
         mhMin, mhMax = 124.98, 125.02
         rMin, rMax = 0.98, 1.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        #doFitDiagnostics_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, combineOptions=combineOptions)
-        
-        tag, label = "ee_cat1", "e^{#plus}e^{#minus}, central-central"
-        mhMin, mhMax = 124.98, 125.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-       
-        tag, label = "ee_cat2", "e^{#plus}e^{#minus}, central-forward"
-        mhMin, mhMax = 124.98, 125.02
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        tag, label = "ee_cat3", "e^{#plus}e^{#minus}, forward-forward"
-        mhMin, mhMax = 124.95, 125.05
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        tag, label = "ee_combined", "e^{#plus}e^{#minus}, combined"
-        mhMin, mhMax = 124.99, 125.01
-        combineCards("%s/%s" % (combineDir, tag), [combineDir+"/ee_cat1/datacard_parametric.txt", combineDir+"/ee_cat2/datacard_parametric.txt", combineDir+"/ee_cat3/datacard_parametric.txt"])
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-    
-    ############### MUON+ELECTRON
-    if False:
-        combineOptions = ""
-        if not doSyst:
-            combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_MU,LEPSCALE_EL" # ,bkg_norm --setParameters bkg_norm=0
-            
-        #combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_MU" # ,bkg_norm --setParameters bkg_norm=0
-    
-        #tag, label = "mumu_ee_combined_inclusive", "#mu^{#plus}#mu^{#minus}+e^{#plus}e^{#minus}, inclusive"
-        #mhMin, mhMax = 124.99, 125.01
-        #combineCards("%s/%s" % (combineDir, tag), [combineDir+"/mumu_cat0/datacard_parametric.txt", combineDir+"/ee_cat0/datacard_parametric.txt"])
-        #doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        #analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
+    else:
         tag, label = "mumu_ee_combined_categorized", "#mu^{#plus}#mu^{#minus}+e^{#plus}e^{#minus}, categorized"
         mhMin, mhMax = 124.99, 125.01
-        combineCards("%s/%s" % (combineDir, tag), [combineDir+"/mumu_combined/datacard.txt", combineDir+"/ee_combined/datacard.txt"])
-        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
-        analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=mhMin, xMax=mhMax)
-        
-        
-        plotMultiple(["%s/mumu_cat0/"%outDir, "%s/ee_cat0/"%outDir, "%s/mumu_ee_combined_inclusive/"%outDir], ["#mu^{#plus}#mu^{#minus}, inclusive", "e^{#plus}e^{#minus}, inclusive", "#mu^{#plus}#mu^{#minus} + e^{#plus}e^{#minus}, inclusive"], "%s/mumu_ee_inclusive"%outDir, xMin=124.99, xMax=125.01)
-        
-        plotMultiple(["%s/mumu_combined/"%outDir, "%s/ee_combined/"%outDir, "%s/mumu_ee_combined_categorized/"%outDir], ["#mu^{#plus}#mu^{#minus}, categorized", "e^{#plus}e^{#minus}, categorized", "#mu^{#plus}#mu^{#minus} + e^{#plus}e^{#minus}, categorized"], "%s/mumu_ee_categorized"%outDir, xMin=124.99, xMax=125.01)
-        
-        
-        plotMultiple(["%s/mumu_cat0/"%outDir, "%s/mumu_combined/"%outDir, "%s/ee_cat0/"%outDir, "%s/ee_combined/"%outDir], ["#mu^{#plus}#mu^{#minus}, inclusive", "#mu^{#plus}#mu^{#minus}, categorized", "e^{#plus}e^{#minus}, inclusive", "e^{#plus}e^{#minus}, categorized"], "%s/mumu_ee_inclusive_categorized"%outDir, xMin=124.99, xMax=125.01)
-        
-   
-    
-        
-    combineDir = "combine/run_mc"
-    outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_mc/"
-    
-    ############### MUON
-    if False:
-    
-        #combineOptions = "--setParameters MH=125.02"
-        #combineOptions = "--setParameters MH=125.02,shapeBkg_bkg_bin1__norm=0,r=1.06"
-        #combineOptions = "--setParameters shapeBkg_bkg_bin1__norm=0,r=1.06"
-        combineOptions = "--freezeParameters r,shapeBkg_bkg_bin1__norm --setParameters MH=125.00,shapeBkg_bkg_bin1__norm=0"
-    
-        tag, label = "mumu_cat0", "#mu^{#plus}#mu^{#minus}, inclusive"
-        xMin, xMax = 124.9, 125.1
-        #doFitDiagnostics_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, combineOptions=combineOptions)
-        #doFit_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, npoints=50, combineOptions=combineOptions)
-        #analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=xMin, xMax=xMax)
-        
-        tag, label = "ee_cat0", "e^{#plus}e^{#minus}, inclusive"
-        xMin, xMax = 124.9, 125.1
-        doFitDiagnostics_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, combineOptions=combineOptions)
-        #doFit_mass("%s/%s" % (combineDir, tag), mhMin=xMin, mhMax=xMax, npoints=50, combineOptions=combineOptions)
-        #analyzeMass("%s/%s" % (combineDir, tag), "%s/%s/" % (outDir, tag), label=label, xMin=xMin, xMax=xMax)
-        
-      
 
-    ############### BDT
-    
-    if True:
-    
-        tag = "BDTScore" # BDT baseline baseline_no_costhetamiss BDTScore
-        #rMin, rMax = 0.96, 1.04
-        rMin, rMax = 0.98, 1.02
-        
-        combineOptions = "--setParameters bkg_mumu_norm=0.1,bkg_ee_norm=0.001"
+    ## Statistical Uncertainty fit
+    suffix = "_STAT"
+    if flavor == "combine":
+        combineOptions = "--freezeParameters BES,ISR,SQRTS,LEPSCALE_MU,LEPSCALE_EL" # ,bkg_norm --setParameters bkg_norm=0
+        combineCards("%s/%s" % (combineDir, tag), [combineDir+"/mumu_cat0/datacard_parametric.txt", combineDir+"/ee_cat0/datacard_parametric.txt"])
+    else:
+        combineOptions = "--freezeParameters=BES,SQRTS,LEPSCALE_MU"
+    doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+    analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+    ## Systematics
+    if doSyst and (flavor == "mumu" or flavor=="ee"):
+        # LEPSCALE
+        if flavor =="mumu": suffix = "_LEPSCALE_MU"
+        else: suffix = "_LEPSCALE_EL"
+        combineOptions = "--freezeParameters=BES,SQRTS"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        # BES
+        suffix = "_BES"
+        if flavor =="mumu": combineOptions = "--freezeParameters=LEPSCALE_MU,SQRTS"
+        else: combineOptions = "--freezeParameters=LEPSCALE_EL,SQRTS"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        # SQRTS
+        suffix = "_SQRTS"
+        if flavor =="mumu": combineOptions = "--freezeParameters=BES,LEPSCALE_MU"
+        else: combineOptions = "--freezeParameters=BES,LEPSCALE_EL"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        # Syst. combined
+        if flavor =="mumu": suffix = "_BES_SQRTS_LEPSCALE_MU"
+        else: suffix = "_BES_SQRTS_LEPSCALE_EL"
         combineOptions = ""
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax) 
+
+        if flavor == "mumu":
+            plotMultiple(["_STAT", "_BES_SQRTS_LEPSCALE_MU"], ["#mu^{+}#mu^{-} Stat. only", "#mu^{+}#mu^{-} Stat.+Syst."], [outDir, outDir], outDir, xMin=mhMin, xMax=mhMax)
+        else:
+            plotMultiple(["_STAT", "_BES_SQRTS_LEPSCALE_EL"], ["e^{+}e^{-} Stat. only", "e^{+}e^{-} Stat.+Syst."], [outDir,outDir], outDir,xMin=mhMin,xMax=mhMax)
         
-        combineDir = "combine/run_binned_{tag}_mumu/".format(tag=tag)
-        outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_binned_{tag}/mumu/".format(tag=tag)
-        label = "#mu^{#plus}#mu^{#minus}"
-        doFit_xsec(combineDir, rMin=rMin, rMax=rMax, npoints=50, combineOptions=combineOptions)
-        analyzeXsec(combineDir, outDir, label=label, xMin=rMin, xMax=rMax)
-        
-        
-        combineDir = "combine/run_binned_{tag}_ee/".format(tag=tag)
-        outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_binned_{tag}/ee/".format(tag=tag)
-        label = "e^{#plus}e^{#minus}"
-        doFit_xsec(combineDir, rMin=rMin, rMax=rMax, npoints=50, combineOptions=combineOptions)
-        analyzeXsec(combineDir, outDir, label=label, xMin=rMin, xMax=rMax)
-        
-        
-        combineDir = "combine/run_binned_{tag}_combined/".format(tag=tag)
-        outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_binned_{tag}/combined/".format(tag=tag)
-        combineCards(combineDir, ["combine/run_binned_{tag}_mumu/datacard_binned.txt".format(tag=tag), "combine/run_binned_{tag}_ee/datacard_binned.txt".format(tag=tag)])
-        doFit_xsec(combineDir, rMin=rMin, rMax=rMax, npoints=50, combineOptions=combineOptions)
-        analyzeXsec(combineDir, outDir, label=label, xMin=rMin, xMax=rMax)
-        
-        plotMultiple_xsec(["combine/run_binned_{tag}_mumu/".format(tag=tag), "combine/run_binned_{tag}_ee/".format(tag=tag), "combine/run_binned_{tag}_combined/".format(tag=tag)], ["#mu^{#plus}#mu^{#minus}", "e^{#plus}e^{#minus}", "#mu^{#plus}#mu^{#minus}+e^{#plus}e^{#minus}"], "%s/summary"%outDir, xMin=rMin, xMax=rMax)
-        
-        
-        #rMin, rMax = 0.98, 1.02
-        #outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine_binned_BDT/"
-        #plotMultiple_xsec(["combine/run_binned_BDT_combined/", "combine/run_binned_baseline_combined/", "combine/run_binned_baseline_no_costhetamiss_combined/"], ["BDT", "Baseline (with cos(#theta_{miss}))", "Baseline (without cos(#theta_{miss}))"], "%s/summary"%outDir, xMin=rMin, xMax=rMax)
+        fOut_txt = open(outDir+"/unc.txt", "w")
+        runDir = outDir
+        breakDown()
+        fOut_txt.close()
+
+    ## Systematics for combine
+    if doSyst and flavor =="combine":
+        suffix = "_LEPSCALE_MU"
+        combineOptions = "--freezeParameters=BES,SQRTS,LEPSCALE_EL"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+        suffix = "_LEPSCALE_EL"
+        combineOptions = "--freezeParameters=BES,SQRTS,LEPSCALE_MU"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        suffix = "_BES"
+        combineOptions = "--freezeParameters=LEPSCALE_MU,LEPSCALE_EL,SQRTS"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        suffix = "_SQRTS"
+        combineOptions = "--freezeParameters=LEPSCALE_MU,LEPSCALE_EL,BES"
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), "%s/" % outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        suffix = "_BES_SQRTS_LEPSCALE_MU_LEPSCALE_EL"
+        combineOptions = ""
+        doFit_mass("%s/%s" % (combineDir, tag), mhMin=mhMin, mhMax=mhMax, npoints=50, combineOptions=combineOptions)
+        analyzeMass("%s/%s" % (combineDir, tag), outDir, label=label, xMin=mhMin, xMax=mhMax)
+
+        plotMultiple(["_STAT", "_BES_SQRTS_LEPSCALE_MU_LEPSCALE_EL"], ["l^{+}l^{-} Stat. only", "l^{+}l^{-} Stat.+Syst."], 
+                    [outDir,outDir], outDir, xMin=mhMin, xMax=mhMax)
+        plotMultiple(["_STAT", "_STAT", "_STAT"], 
+                    ["#mu^{+}#mu^{-} Stat. only", "e^{+}e^{-} Stat. Only", "#mu^{+}#mu^{-} + e^{+}e^{-} Stat. Only"], 
+                    ["/eos/user/m/mgaillia/FCCee/MidTerm/mumu/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0",
+                    "/eos/user/m/mgaillia/FCCee/MidTerm/ee/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0",
+                    "/eos/user/m/mgaillia/FCCee/MidTerm/combine/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0"],
+                    outDir, name="_STAT", xMin=mhMin, xMax=mhMax)
+        plotMultiple(["_BES_SQRTS_LEPSCALE_MU", "_BES_SQRTS_LEPSCALE_EL", "_BES_SQRTS_LEPSCALE_MU_LEPSCALE_EL"], 
+                    ["#mu^{+}#mu^{-} Stat.+Syst.", "e^{+}e^{-} Stat.+Syst.", "#mu^{+}#mu^{-} + e^{+}e^{-} Stat.+Syst."], 
+                    ["/eos/user/m/mgaillia/FCCee/MidTerm/mumu/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0",
+                    "/eos/user/m/mgaillia/FCCee/MidTerm/ee/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0",
+                    "/eos/user/m/mgaillia/FCCee/MidTerm/combine/BDT_analysis_samples"+cat_sample+"/ZH_mass_xsec/cat0"],
+                    outDir, name="_SYST", xMin=mhMin, xMax=mhMax)
+
         

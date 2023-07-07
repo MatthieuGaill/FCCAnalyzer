@@ -75,9 +75,11 @@ def doSignal(normYields = True):
         'yminR'             : -3.5,
         'ymaxR'             : 3.5,
     }
-    
-    hist_norm = fIn.Get("%s/%s" % (procs[2], hName))
-    hist_norm = hist_norm.ProjectionX("hist_zh_norm", cat_idx_min, cat_idx_max)   
+
+    fIn = ROOT.TFile(baseFileName.format(sampleName=procs[2],selection=selection))
+    hist_norm = copy.deepcopy(fIn.Get(hName))
+    fIn.Close()
+    hist_norm.Scale(intLumi)
     yield_norm = hist_norm.Integral()
    
     for i, proc in enumerate(procs):
@@ -86,8 +88,10 @@ def doSignal(normYields = True):
         mH_ = ("%.2f" % mH).replace(".", "p")
         print("Do mH=%.2f" % mH)
 
-        hist_zh = fIn.Get("%s/%s" % (proc, hName))
-        hist_zh = hist_zh.ProjectionX("hist_zh_%s" % mH_, cat_idx_min, cat_idx_max)   
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection))
+        hist_zh = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist_zh.Scale(intLumi)
         if normYields: hist_zh.Scale(yield_norm/hist_zh.Integral())
         hist_zh = hist_zh.Rebin(rebin)
         rdh_zh = ROOT.RooDataHist("rdh_zh_%s" % mH_, "rdh_zh", ROOT.RooArgList(recoilmass), ROOT.RooFit.Import(hist_zh))
@@ -1140,8 +1144,10 @@ def doBackgrounds():
 
     for proc in procs:
     
-        hist = fIn.Get("%s/%s" % (proc, hName))
-        hist = hist.ProjectionX("hist_%s" % proc, cat_idx_min, cat_idx_max)   
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection))
+        hist = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist.Scale(intLumi)
         hist = hist.Rebin(rebin)
         rdh = ROOT.RooDataHist("rdh_%s" % proc, "rdh", ROOT.RooArgList(recoilmass), ROOT.RooFit.Import(hist))
         
@@ -1326,16 +1332,24 @@ def doBES():
         
     for s in ["Up", "Down"]:
 
-        if s == "Up": proc = "wzp6_ee_%sH_BES-higher-%dpc_ecm240" % (flavor, pct)
-        if s == "Down": proc = "wzp6_ee_%sH_BES-lower-%dpc_ecm240" % (flavor, pct)
-        
+        if s == "Up": 
+            proc = "wzp6_ee_%sH_BES-higher-%dpc_ecm240" % (flavor, pct)
+            s_ = "up"
+        if s == "Down": 
+            proc = "wzp6_ee_%sH_BES-lower-%dpc_ecm240" % (flavor, pct)
+            s_ = "dw"
+
         # get norm
-        hist_zh_nom = fIn.Get("%s/%s" % ("wzp6_ee_%sH_ecm240" % flavor, hName))
-        hist_zh_nom = hist_zh_nom.ProjectionX("nom", cat_idx_min, cat_idx_max)
+        fIn = ROOT.TFile(baseFileName.format(sampleName="wzp6_ee_%sH_ecm240" % flavor,selection=selection))
+        hist_zh_nom = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist_zh_nom.Scale(intLumi)
         yield_nom = hist_zh_nom.Integral()
             
-        hist_zh = fIn.Get("%s/%s" % (proc, hName))
-        hist_zh = hist_zh.ProjectionX("hist_zh_%s_BES%s" % (mH_, s), cat_idx_min, cat_idx_max)   
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection+"_bes%s"%s_))
+        hist_zh = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist_zh.Scale(intLumi)
         hist_zh.SetName("hist_zh_%s_BES%s" % (mH_, s))
         hist_zh.Scale(yield_nom/hist_zh.Integral())
         hist_zh = hist_zh.Rebin(rebin)
@@ -1554,7 +1568,7 @@ def doBES():
  
 def doSQRTS():
 
-    scale_BES = ROOT.RooRealVar("scale_SQRTS", "SQRTS scale parameter", 0, -1, 1)
+    scale_SQRTS = ROOT.RooRealVar("scale_SQRTS", "SQRTS scale parameter", 0, -1, 1)
     
 
     ## only consider variation for 125 GeV
@@ -1616,13 +1630,17 @@ def doSQRTS():
         if s == "Down": s_ = "dw"
         
         # get norm
-        hist_zh_nom = fIn.Get("%s/%s" % (proc, hName))
-        hist_zh_nom = hist_zh_nom.ProjectionX("nom", cat_idx_min, cat_idx_max)
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection))
+        hist_zh_nom = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist_zh_nom.Scale(intLumi)
         yield_nom = hist_zh_nom.Integral()
             
-        hist_zh = fIn.Get("%s/%s" % (proc, hName + "_sqrts%s"%s_))
-        hist_zh = hist_zh.ProjectionX("hist_zh_%s_SQRTS%s" % (mH_, s), cat_idx_min, cat_idx_max)   
-        hist_zh.SetName("hist_zh_%s_BES%s" % (mH_, s))
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection+"_sqrts%s"%s_))
+        hist_zh = copy.deepcopy(fIn.Get(hName+"_sqrts%s"%s_))  # /!\ modified, don't know if it's correct or only hName should be put ?
+        fIn.Close()
+        hist_zh.Scale(intLumi)
+        hist_zh.SetName("hist_zh_%s_SQRTS%s" % (mH_, s))
         hist_zh.Scale(yield_nom/hist_zh.Integral())
         hist_zh = hist_zh.Rebin(rebin)
         rdh_zh = ROOT.RooDataHist("rdh_zh_%s_SQRTS%s" % (mH_, s), "rdh_zh", ROOT.RooArgList(recoilmass), ROOT.RooFit.Import(hist_zh))
@@ -1808,7 +1826,7 @@ def doSQRTS():
  
 def doLEPSCALE():
 
-    scale_BES = ROOT.RooRealVar("scale_LEPSCALE", "LEPSCALE scale parameter", 0, -1, 1)
+    scale_LEPSCALE = ROOT.RooRealVar("scale_LEPSCALE", "LEPSCALE scale parameter", 0, -1, 1)
 
     ## only consider variation for 125 GeV
     ## assume variations to be indentical for other mass points
@@ -1869,12 +1887,16 @@ def doLEPSCALE():
         if s == "Down": s_ = "dw"
 
         # get norm
-        hist_zh_nom = fIn.Get("%s/%s" % (proc, hName))
-        hist_zh_nom = hist_zh_nom.ProjectionX("nom", cat_idx_min, cat_idx_max)
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection))
+        hist_zh_nom = copy.deepcopy(fIn.Get(hName))
+        fIn.Close()
+        hist_zh_nom.Scale(intLumi)
         yield_nom = hist_zh_nom.Integral()
             
-        hist_zh = fIn.Get("%s/%s" % (proc, hName + "_scale%s"%s_))
-        hist_zh = hist_zh.ProjectionX("hist_zh_%s_LEPSCALE%s" % (mH_, s), cat_idx_min, cat_idx_max)   
+        fIn = ROOT.TFile(baseFileName.format(sampleName=proc,selection=selection+"_scale%s"%s_))
+        hist_zh = copy.deepcopy(fIn.Get(hName)) #+"_scale%s"%s_))
+        fIn.Close()
+        hist_zh.Scale(intLumi)
         hist_zh.SetName("hist_zh_%s_LEPSCALE%s" % (mH_, s))
         hist_zh.Scale(yield_nom/hist_zh.Integral())
         hist_zh = hist_zh.Rebin(rebin)
@@ -2286,15 +2308,20 @@ def doISR():
  
 if __name__ == "__main__":
 
-    flavor = "ee"
-    cat = 3
+    flavor = "mumu"
+    intLumi  = 5.0e+06 #in pb-1
+
+    #cat not implemented here, only inclusive cat = 0
+    cat = 0
     label = "#mu^{#plus}#mu^{#minus}, category %d" % (cat) if flavor == "mumu" else "e^{#plus}e^{#minus}, category %d" % (cat)
-    fIn = ROOT.TFile("tmp/output_ZH_mass_%s.root" % flavor)
-    outDir = "/eos/user/j/jaeyserm/www/FCCee/ZH_mass_xsec/combine/%s_cat%d/" % (flavor, cat)
-    hName = "zll_recoil_m"
-    
-    if cat == 0: cat_idx_min, cat_idx_max = 0, 5
-    else: cat_idx_min, cat_idx_max = cat, cat
+    baseFileName = "/eos/user/m/mgaillia/FCCee/MidTerm/" + flavor + "/BDT_analysis_samples1/syst/{sampleName}_{selection}_histo.root"
+
+    outDir = "/eos/user/m/mgaillia/FCCee/MidTerm/"+flavor+"/BDT_analysis_samples1/ZH_mass_xsec/cat0"
+    hName = "leptonic_recoil_m_zoom3"
+    selection  = "sel_Baseline"
+
+    # if cat == 0: cat_idx_min, cat_idx_max = 0, 5
+    # else: cat_idx_min, cat_idx_max = cat, cat
     
 
     runDir = "combine/run/%s_cat%s" % (flavor, cat)
